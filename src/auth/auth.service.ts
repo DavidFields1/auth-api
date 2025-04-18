@@ -7,9 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto } from './dto/create-user.dto';
-import { LoginUserDto } from './dto/login-user.dto';
 import { User } from './entities/user.entity';
+import { LoginUserDto, CreateUserDto, UpdatePasswordDto } from './dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { Providers } from './interfaces/providers.enum';
 
@@ -95,6 +94,26 @@ export class AuthService {
 		return {
 			...user,
 		} as UserJwt;
+	}
+
+	async updatePassword({ password }: UpdatePasswordDto, user: User) {
+		try {
+			const salt = await bcrypt.genSalt();
+			const hashedPassword = await bcrypt.hash(password!, salt);
+
+			await this.userRepository.update(user.id, {
+				password: hashedPassword,
+			});
+
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			const { password: _, ...userData } = user;
+
+			return {
+				...userData,
+			};
+		} catch (error) {
+			this.handleDBErrors(error);
+		}
 	}
 
 	checkAuthStatus(user: User) {
