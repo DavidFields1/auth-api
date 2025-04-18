@@ -11,6 +11,11 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { User } from './entities/user.entity';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { Providers } from './interfaces/providers.enum';
+
+type UserJwt = User & {
+	token: string;
+};
 
 @Injectable()
 export class AuthService {
@@ -20,13 +25,15 @@ export class AuthService {
 		private readonly jwtService: JwtService
 	) {}
 
-	async create(createAuthDto: CreateUserDto) {
+	async create(createAuthDto: CreateUserDto): Promise<UserJwt> {
 		try {
-			const { password } = createAuthDto;
+			if (createAuthDto.provider === Providers.EMAIL) {
+				const { password } = createAuthDto;
 
-			// Hash the password
-			const salt = await bcrypt.genSalt();
-			createAuthDto.password = await bcrypt.hash(password, salt);
+				// Hash the password
+				const salt = await bcrypt.genSalt();
+				createAuthDto.password = await bcrypt.hash(password!, salt);
+			}
 
 			const user = this.userRepository.create(createAuthDto);
 			await this.userRepository.save(user);
@@ -37,7 +44,7 @@ export class AuthService {
 			return {
 				...userWithoutPassword,
 				token: this.getJwt({ id: user.id }),
-			};
+			} as UserJwt;
 		} catch (error) {
 			this.handleDBErrors(error);
 		}
@@ -71,6 +78,23 @@ export class AuthService {
 			}
 			this.handleDBErrors(error);
 		}
+	}
+
+	async validateOAuthLogin(email: string, name: string): Promise<UserJwt> {
+		let user = await this.userRepository.findOne({ where: { email } });
+		if (!user) {
+			const params: CreateUserDto = {
+				email,
+				firstName: name,
+				lastName: '',
+				provider: Providers.GOOGLE,
+			};
+			user = await this.create(params);
+		}
+
+		return {
+			...user,
+		} as UserJwt;
 	}
 
 	checkAuthStatus(user: User) {

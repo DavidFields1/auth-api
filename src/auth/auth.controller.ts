@@ -1,13 +1,9 @@
-import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginUserDto } from './dto';
-import { GetUser, GetRawHeaders, RoleProtected } from './decorators';
 import { User } from './entities/user.entity';
-import { UserRoleGuard } from './guards/user-role.guard';
-import { RolesEnum } from './interfaces/roles';
-import { Auth } from './decorators/auth.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -50,120 +46,21 @@ export class AuthController {
 		return this.authService.login(loginUserDto);
 	}
 
-	@Get('status')
-	@ApiOperation({ summary: 'Check authentication status' })
-	@ApiResponse({
-		status: 200,
-		description: 'Authentication status checked successfully',
-		type: User,
-	})
-	@ApiResponse({
-		status: 401,
-		description: 'Unauthorized - Invalid or expired token',
-	})
-	checkAuthStatus(@GetUser() user: User) {
-		return this.authService.checkAuthStatus(user);
+	@Get('google')
+	@UseGuards(AuthGuard('google'))
+	async googleAuth() {
+		// inicia flujo OAuth2 con Google
 	}
 
-	@Get('test-auth')
-	@ApiOperation({ summary: 'Test authentication (Development only)' })
-	@ApiResponse({
-		status: 200,
-		description: 'Authentication test successful',
-		schema: {
-			type: 'object',
-			properties: {
-				ok: { type: 'boolean' },
-				message: { type: 'string' },
-				user: { type: 'object' },
-				userEmail: { type: 'string' },
-				userIdAndEmail: { type: 'array', items: { type: 'string' } },
-				rawHeaders: { type: 'array', items: { type: 'string' } },
-			},
-		},
-	})
-	@ApiResponse({
-		status: 401,
-		description: 'Unauthorized - Invalid or expired token',
-	})
-	@UseGuards(AuthGuard())
-	checkStatus(
-		@GetUser() user: User,
-		@GetUser('email') userEmail: string,
-		@GetUser(['id', 'email']) userIdAndEmail: string[],
-		@GetRawHeaders() rawHeaders: string[]
-	) {
-		return {
-			ok: true,
-			message: 'Authenticated',
-			user,
-			userEmail,
-			userIdAndEmail,
-			rawHeaders,
-		};
-	}
+	@Get('google/redirect')
+	@UseGuards(AuthGuard('google'))
+	async googleAuthRedirect(@Req() req) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		const { email, name } = req.user;
 
-	@Get('test-roles')
-	@ApiOperation({
-		summary: 'Test role-based authentication (Development only)',
-	})
-	@ApiResponse({
-		status: 200,
-		description: 'Role test successful',
-		schema: {
-			type: 'object',
-			properties: {
-				ok: { type: 'boolean' },
-				message: { type: 'string' },
-				user: { type: 'object' },
-			},
-		},
-	})
-	@ApiResponse({
-		status: 401,
-		description: 'Unauthorized - Invalid or expired token',
-	})
-	@ApiResponse({
-		status: 403,
-		description: 'Forbidden - User does not have required role',
-	})
-	@RoleProtected(RolesEnum.ADMIN)
-	@UseGuards(AuthGuard(), UserRoleGuard)
-	checkRoles(@GetUser() user: User) {
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+		const user = await this.authService.validateOAuthLogin(email, name);
 		return {
-			ok: true,
-			message: 'Authenticated',
-			user,
-		};
-	}
-
-	@Get('test-decorator')
-	@ApiOperation({ summary: 'Test custom auth decorator (Development only)' })
-	@ApiResponse({
-		status: 200,
-		description: 'Decorator test successful',
-		schema: {
-			type: 'object',
-			properties: {
-				ok: { type: 'boolean' },
-				message: { type: 'string' },
-				user: { type: 'object' },
-			},
-		},
-	})
-	@ApiResponse({
-		status: 401,
-		description: 'Unauthorized - Invalid or expired token',
-	})
-	@ApiResponse({
-		status: 403,
-		description: 'Forbidden - User does not have required role',
-	})
-	@Auth(RolesEnum.ADMIN, RolesEnum.USER)
-	checkRolesDecorator(@GetUser() user: User) {
-		return {
-			ok: true,
-			message: 'Authenticated',
 			user,
 		};
 	}

@@ -1,11 +1,14 @@
 import {
 	IsEmail,
+	IsEnum,
 	IsString,
 	Matches,
 	MaxLength,
 	MinLength,
+	ValidateIf,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Providers } from '../interfaces/providers.enum';
 
 export class CreateUserDto {
 	@ApiProperty({
@@ -25,6 +28,10 @@ export class CreateUserDto {
 		pattern:
 			'^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$',
 	})
+	@ValidateIf(
+		(obj: CreateUserDto) =>
+			obj.provider === Providers.EMAIL || !obj.provider
+	)
 	@IsString()
 	@MinLength(8)
 	@MaxLength(30)
@@ -32,7 +39,7 @@ export class CreateUserDto {
 		message:
 			'password is too weak. It should contain at least 8 characters, one uppercase letter, one lowercase letter, one number and one special character.',
 	})
-	password: string;
+	password?: string;
 
 	@ApiProperty({
 		description: 'User first name',
@@ -51,4 +58,9 @@ export class CreateUserDto {
 	@IsString()
 	@MinLength(2)
 	lastName: string;
+
+	@IsEnum(Providers, {
+		always: true,
+	})
+	provider: Providers;
 }

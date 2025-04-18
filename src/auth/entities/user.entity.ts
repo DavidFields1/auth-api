@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { RolesEnum } from '../interfaces/roles';
 import { ApiProperty } from '@nestjs/swagger';
+import { Providers } from '../interfaces/providers.enum';
 
 @Entity('users')
 export class User {
@@ -32,7 +33,7 @@ export class User {
 		example: '$2b$10$X7UrE2J...',
 		writeOnly: true,
 	})
-	@Column('text')
+	@Column('text', { nullable: true })
 	password: string;
 
 	@ApiProperty({
@@ -75,6 +76,13 @@ export class User {
 		default: [RolesEnum.USER],
 	})
 	roles: string[];
+
+	@Column({
+		type: 'enum',
+		enum: Providers,
+		default: Providers.EMAIL,
+	})
+	provider: string;
 
 	@BeforeInsert()
 	verifyEmail() {
