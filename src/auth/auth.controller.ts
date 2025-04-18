@@ -5,6 +5,13 @@ import { User } from './entities/user.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 
+interface Request extends Express.Request {
+	user: {
+		email: string;
+		name: string;
+	};
+}
+
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -54,11 +61,8 @@ export class AuthController {
 
 	@Get('google/redirect')
 	@UseGuards(AuthGuard('google'))
-	async googleAuthRedirect(@Req() req) {
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+	async googleAuthRedirect(@Req() req: Request) {
 		const { email, name } = req.user;
-
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
 		const user = await this.authService.validateOAuthLogin(email, name);
 		return {
 			user,
