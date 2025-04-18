@@ -1,9 +1,20 @@
-import { Controller, Post, Body, Get, UseGuards, Req } from '@nestjs/common';
+import {
+	Controller,
+	Post,
+	Body,
+	Get,
+	UseGuards,
+	Req,
+	Patch,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto, LoginUserDto } from './dto';
 import { User } from './entities/user.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import { Auth } from './decorators/auth.decorator';
+import { GetUser } from './decorators';
 
 interface Request extends Express.Request {
 	user: {
@@ -51,6 +62,15 @@ export class AuthController {
 	})
 	login(@Body() loginUserDto: LoginUserDto) {
 		return this.authService.login(loginUserDto);
+	}
+
+	@Patch('password')
+	@Auth()
+	updatePassword(
+		@Body() updatePasswordDto: UpdatePasswordDto,
+		@GetUser() user: User
+	) {
+		return this.authService.updatePassword(updatePasswordDto, user);
 	}
 
 	@Get('google')
